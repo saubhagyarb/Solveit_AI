@@ -4,7 +4,6 @@ import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.content
 import com.saubh.solveitai.GenerativeModel.model
 import kotlinx.coroutines.delay
@@ -30,12 +29,14 @@ class ChatViewModel : ViewModel() {
                 messages.add(Message(message = "...", role = "Model"))
 
                 val response = chat.sendMessage(prompt)
+                Log.d("TAG", "sendMessage: ${response.text}")
                 messages.removeAt(messages.lastIndex)
                 messages.add(Message(message = response.text.toString(), role = "Model"))
             } catch (e : Exception){
+                e.printStackTrace()
                 messages.removeAt(messages.lastIndex)
                 messages.add(Message(message = "Something went wrong!!", role = "Model"))
-
+                Log.e("EXCEPTION", "sendMessage: ${e.message}")
             }
         }
     }

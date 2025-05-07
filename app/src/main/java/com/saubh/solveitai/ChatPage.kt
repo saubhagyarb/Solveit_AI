@@ -14,8 +14,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ArrowBackIosNew
 import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.School
@@ -25,30 +25,35 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.airbnb.lottie.compose.*
+import dev.jeziellago.compose.markdowntext.MarkdownText
 import java.util.Calendar
 import java.util.Locale
 
 @Composable
-fun ChatScreen(modifier: Modifier = Modifier, messages: List<Message>) {
+fun ChatScreen(modifier: Modifier = Modifier,
+               messages: List<Message>,
+               viewModel: ChatViewModel) {
     Surface(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
+        DrawCanvas()
         if (messages.isEmpty()) {
-            EnhancedEmptyScreen()//EmptyScreen()
+            EmptyScreen(viewModel = viewModel)
         } else {
             ChatList(messages = messages)
         }
@@ -58,8 +63,10 @@ fun ChatScreen(modifier: Modifier = Modifier, messages: List<Message>) {
 @Composable
 fun ChatList(messages: List<Message>) {
 
-    Box(modifier = Modifier.fillMaxSize()){
-        DrawCanvas()
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+    ){
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             reverseLayout = true
@@ -77,11 +84,11 @@ fun ChatCard(message: Message) {
     val bubbleColor = if (isModel)
         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
     else
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f)
     val textColor = if (isModel)
         MaterialTheme.colorScheme.onSurfaceVariant
     else
-        MaterialTheme.colorScheme.onPrimary
+        MaterialTheme.colorScheme.onPrimaryContainer
     val icon = if (isModel)
         painterResource(R.drawable.bot)
     else
@@ -120,16 +127,18 @@ fun ChatCard(message: Message) {
                 )
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
-            SelectionContainer {
-                Text(
-                    text = message.message,
+                MarkdownText(
+                    markdown = message.message,
                     style = MaterialTheme.typography.bodyLarge.copy(
                         lineHeight = 22.sp,
-                        letterSpacing = 0.25.sp
+                        letterSpacing = 0.25.sp,
+                        color = textColor
                     ),
-                    color = textColor
+                    isTextSelectable = true,
+                    syntaxHighlightColor = MaterialTheme.colorScheme.surfaceDim,
+                    syntaxHighlightTextColor = MaterialTheme.colorScheme.onSurface,
+                    linkColor = MaterialTheme.colorScheme.primary
                 )
-            }
         }
 
         if (!isModel) {
@@ -146,35 +155,55 @@ fun ChatCard(message: Message) {
     }
 }
 
-
-
 @Composable
-fun AppTopBar() {
+fun AppTopBar(viewModel: ChatViewModel) {
     Surface {
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(WindowInsets.statusBars.asPaddingValues()),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
+                .padding(WindowInsets.statusBars.asPaddingValues())
+                .height(48.dp)
         ) {
-            Icon(
-                imageVector = ImageVector.vectorResource(R.drawable.cloud_build_svgrepo_com),
-                contentDescription = "App logo",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .size(28.dp)
-                    .padding(end = 8.dp)
-            )
-            Text(
-                text = "SolveIt AI",
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.Bold
-            )
+            if (viewModel.messages.isNotEmpty()) {
+                IconButton(
+                    onClick = { viewModel.messages.clear() },
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .padding(start = 8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.ArrowBackIosNew,
+                        contentDescription = "Delete chat",
+                        tint = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier.align(Alignment.Center),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = ImageVector.vectorResource(R.drawable.cloud_build_svgrepo_com),
+                    contentDescription = "App logo",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .size(28.dp)
+                        .padding(end = 8.dp)
+                )
+                Text(
+                    text = stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }
+
+
 
 @Composable
 fun AppBottomBar(viewModel: ChatViewModel) {
@@ -230,8 +259,7 @@ fun AppBottomBar(viewModel: ChatViewModel) {
                 imageVector = ImageVector.vectorResource(R.drawable.send),
                 contentDescription = "Send",
                 tint = if (message.isNotBlank())MaterialTheme.colorScheme.onPrimaryContainer
-                else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(24.dp)
+                else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -249,7 +277,7 @@ fun getTimeOfDayString(): String {
 }
 
 @Composable
-fun EnhancedEmptyScreen() {
+fun EmptyScreen(viewModel: ChatViewModel) {
     val infiniteTransition = rememberInfiniteTransition()
 
     val scale by infiniteTransition.animateFloat(
@@ -272,10 +300,7 @@ fun EnhancedEmptyScreen() {
         tileMode = TileMode.Clamp
     )
 
-    val greeting = "Good ${getTimeOfDayString()}"
-
     Box(modifier = Modifier.fillMaxSize()) {
-        DrawCanvas()
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -293,11 +318,6 @@ fun EnhancedEmptyScreen() {
                 modifier = Modifier
                     .size(240.dp)
                     .scale(scale)
-                    .shadow(
-                        elevation = 8.dp,
-                        shape = CircleShape,
-                        ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                    )
                     .background(
                         brush = Brush.radialGradient(
                             colors = listOf(
@@ -318,14 +338,11 @@ fun EnhancedEmptyScreen() {
                 )
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Gradient text
             Text(
-                text = "$greeting, I'm Ready to Chat!",
+                text = "Good ${getTimeOfDayString()}!, Let curiosity guide you",
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    brush = gradientBrush // <- This applies the gradient
+                    brush = gradientBrush
                 ),
                 modifier = Modifier
                     .padding(horizontal = 16.dp),
@@ -343,13 +360,13 @@ fun EnhancedEmptyScreen() {
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center
             )
-            SuggestionChips()
+            SuggestionChips(viewModel = viewModel)
         }
     }
 }
 
 @Composable
-private fun SuggestionChips() {
+private fun SuggestionChips(viewModel: ChatViewModel) {
     val suggestions = listOf(
         "Tell me a story" to Icons.Rounded.AutoStories,
         "Daily weather" to Icons.Rounded.WbSunny,
@@ -375,7 +392,7 @@ private fun SuggestionChips() {
     ) {
         suggestions.forEach { (text, icon) ->
             SuggestionChip(
-                onClick = { /* Handle suggestion click */ },
+                onClick = { viewModel.sendMessage(text) },
                 shape = RoundedCornerShape(24.dp),
                 modifier = Modifier.padding(horizontal = 4.dp),
                 colors = SuggestionChipDefaults.suggestionChipColors(

@@ -69,4 +69,6 @@ dependencies {
 
     implementation("androidx.compose.material:material-icons-extended:1.7.0")
 
+    implementation("com.github.jeziellago:compose-markdown:0.5.7")
+
 }

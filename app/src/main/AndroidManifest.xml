@@ -19,7 +19,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:theme="@style/Theme.SolveItAI"
-            android:windowSoftInputMode="adjustPan">
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -27,5 +27,4 @@
             </intent-filter>
         </activity>
     </application>
-
 </manifest>
