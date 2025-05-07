@@ -250,11 +250,6 @@ fun getTimeOfDayString(): String {
 
 @Composable
 fun EnhancedEmptyScreen() {
-    val primary = MaterialTheme.colorScheme.primary
-    val secondary = MaterialTheme.colorScheme.secondary
-    val tertiary = MaterialTheme.colorScheme.tertiary
-    val surface = MaterialTheme.colorScheme.surface
-
     val infiniteTransition = rememberInfiniteTransition()
 
     val scale by infiniteTransition.animateFloat(
@@ -267,7 +262,11 @@ fun EnhancedEmptyScreen() {
     )
 
     val gradientBrush = Brush.linearGradient(
-        colors = listOf(primary.copy(alpha = 0.8f), secondary.copy(alpha = 0.7f), tertiary.copy(alpha = 0.6f)),
+        colors = listOf(
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+            MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f),
+            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.6f)
+        ),
         start = Offset.Zero,
         end = Offset.Infinite,
         tileMode = TileMode.Clamp
@@ -297,11 +296,14 @@ fun EnhancedEmptyScreen() {
                     .shadow(
                         elevation = 8.dp,
                         shape = CircleShape,
-                        ambientColor = primary.copy(alpha = 0.5f)
+                        ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                     )
                     .background(
                         brush = Brush.radialGradient(
-                            colors = listOf(surface.copy(alpha = 0.7f), surface.copy(alpha = 0.3f)),
+                            colors = listOf(
+                                MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+                                MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
+                            ),
                             radius = 240f
                         ),
                         shape = CircleShape

@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.content
+import com.saubh.solveitai.GenerativeModel.model
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -13,11 +14,6 @@ class ChatViewModel : ViewModel() {
     val messages by lazy {
         mutableStateListOf<Message>()
     }
-
-    val model : GenerativeModel = GenerativeModel(
-        modelName = "gemini-2.0-flash",
-        apiKey = BuildConfig.apiKey
-    )
 
     fun sendMessage(prompt: String) {
         viewModelScope.launch {
