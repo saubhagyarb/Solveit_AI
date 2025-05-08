@@ -1,5 +1,6 @@
 package com.saubh.solveitai
 
+import android.graphics.Bitmap
 import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
@@ -27,6 +28,31 @@ class ChatViewModel : ViewModel() {
                 messages.add(Message(message = "...", role = "Model", id = System.currentTimeMillis() + 1))
 
                 val response = chat.sendMessage(prompt = prompt)
+                Log.d("TAG", "sendMessage: ${response.text}")
+                messages.removeAt(messages.lastIndex)
+                messages.add(Message(message = response.text.toString(), role = "Model", id = System.currentTimeMillis()))
+            } catch (e : Exception){
+                e.printStackTrace()
+                messages.removeAt(messages.lastIndex)
+                messages.add(Message(message = "Something went wrong!!", role = "Model", id = System.currentTimeMillis()))
+                Log.e("EXCEPTION", "sendMessage: ${e.message}")
+            }
+        }
+    }
+
+    fun sendMessage(prompt: String, image: Bitmap) {
+        viewModelScope.launch {
+            Log.d("Request", "sendMessage: $prompt")
+            try {
+                messages.add(Message(message = prompt, role = "user", id = System.currentTimeMillis()))
+                messages.add(Message(message = "...", role = "Model", id = System.currentTimeMillis() + 1))
+
+                val response = model.generateContent(
+                    content {
+                        image(image)
+                        text(prompt)
+                    }
+                )
                 Log.d("TAG", "sendMessage: ${response.text}")
                 messages.removeAt(messages.lastIndex)
                 messages.add(Message(message = response.text.toString(), role = "Model", id = System.currentTimeMillis()))

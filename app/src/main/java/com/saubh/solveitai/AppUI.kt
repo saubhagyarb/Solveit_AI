@@ -1,5 +1,11 @@
 package com.saubh.solveitai
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -11,7 +17,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -21,6 +29,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.outlined.ArrowBackIosNew
 import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.Lightbulb
@@ -30,12 +41,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -45,12 +60,16 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.core.content.FileProvider
 import com.airbnb.lottie.compose.*
 import dev.jeziellago.compose.markdowntext.MarkdownText
+import java.io.File
 import java.util.Calendar
 import java.util.Locale
 
 class AppUI(private val viewModel: ChatViewModel) {
+
     @Composable
     fun ChatScreen(
         modifier: Modifier = Modifier,
@@ -220,11 +239,105 @@ class AppUI(private val viewModel: ChatViewModel) {
     @Composable
     fun AppBottomBar() {
         var message by remember { mutableStateOf("") }
+        var bitmap by remember { mutableStateOf<Bitmap?>(null) }
+        var showPhotoOptions by remember { mutableStateOf(false) }
+
+        val context = LocalContext.current
+
+        // Photo Picker for gallery
+        val photoPickerLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.PickVisualMedia()
+        ) { uri: Uri? ->
+            uri?.let {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                bitmap = BitmapFactory.decodeStream(inputStream)
+                inputStream?.close()
+            }
+        }
+
+        // Camera launcher - using TakePicturePreview instead of TakePicture
+        // This approach doesn't require FileProvider configuration
+        val cameraLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.TakePicturePreview()
+        ) { capturedBitmap ->
+            bitmap = capturedBitmap
+        }
+
         val navigationBarsPadding = WindowInsets.navigationBars.asPaddingValues()
         val bottomPadding = if (navigationBarsPadding.calculateBottomPadding() < 8.dp) {
             16.dp
         } else {
             navigationBarsPadding.calculateBottomPadding()
+        }
+
+        // Photo options dropdown
+        if (showPhotoOptions) {
+            Dialog(onDismissRequest = { showPhotoOptions = false }) {
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 6.dp
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            "Select photo from",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            // Camera option
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable {
+                                        showPhotoOptions = false
+                                        cameraLauncher.launch(input = null)
+                                    }
+                                    .padding(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PhotoCamera,
+                                    contentDescription = "Camera",
+                                    modifier = Modifier.size(48.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text("Camera", style = MaterialTheme.typography.bodyMedium)
+                            }
+
+                            // Gallery option
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable {
+                                        showPhotoOptions = false
+                                        photoPickerLauncher.launch(
+                                            PickVisualMediaRequest(
+                                                mediaType = ActivityResultContracts.PickVisualMedia.ImageOnly
+                                            )
+                                        )
+                                    }
+                                    .padding(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PhotoLibrary,
+                                    contentDescription = "Gallery",
+                                    modifier = Modifier.size(48.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text("Gallery", style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         Row(
@@ -252,9 +365,7 @@ class AppUI(private val viewModel: ChatViewModel) {
                 ),
                 leadingIcon = {
                     IconButton(
-                        onClick = {
-
-                        },
+                        onClick = { showPhotoOptions = true },
                         modifier = Modifier.size(24.dp),
                     ) {
                         Icon(
@@ -276,25 +387,61 @@ class AppUI(private val viewModel: ChatViewModel) {
 
             Button(
                 onClick = {
-                    if (message.isNotBlank()) {
-                        viewModel.sendMessage(message)
+                    if (message.isNotBlank() || bitmap != null) {
+                        viewModel.sendMessage(message, bitmap!!)
                         message = ""
+                        bitmap = null
                     }
                 },
                 modifier = Modifier.size(48.dp),
                 shape = CircleShape,
-                enabled = message.isNotBlank(),
+                enabled = message.isNotBlank() || bitmap != null,
                 contentPadding = PaddingValues(0.dp),
             ) {
                 Icon(
                     imageVector = ImageVector.vectorResource(R.drawable.send),
                     contentDescription = "Send",
-                    tint = if (message.isNotBlank()) MaterialTheme.colorScheme.onPrimaryContainer
+                    tint = if (message.isNotBlank() || bitmap != null) MaterialTheme.colorScheme.onPrimaryContainer
                     else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
+
+        // Preview the selected image if available
+        bitmap?.let { image ->
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Image(
+                    bitmap = image.asImageBitmap(),
+                    contentDescription = "Selected image",
+                    modifier = Modifier
+                        .height(120.dp)
+                        .align(Alignment.Center)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Fit
+                )
+
+                IconButton(
+                    onClick = { bitmap = null },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f), CircleShape)
+                        .size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Remove image",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+        }
     }
+
 
     fun getTimeOfDay(): String {
         val calendar = Calendar.getInstance(Locale.getDefault())
