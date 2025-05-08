@@ -6,7 +6,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.ai.client.generativeai.type.content
 import com.saubh.solveitai.GenerativeModel.model
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class ChatViewModel : ViewModel() {
@@ -24,20 +23,20 @@ class ChatViewModel : ViewModel() {
                     }.toList()
                 )
 
-                messages.add(Message(message = prompt, role = "user"))
-                delay(500)
-                messages.add(Message(message = "...", role = "Model"))
+                messages.add(Message(message = prompt, role = "user", id = System.currentTimeMillis()))
+                messages.add(Message(message = "...", role = "Model", id = System.currentTimeMillis() + 1))
 
-                val response = chat.sendMessage(prompt)
+                val response = chat.sendMessage(prompt = prompt)
                 Log.d("TAG", "sendMessage: ${response.text}")
                 messages.removeAt(messages.lastIndex)
-                messages.add(Message(message = response.text.toString(), role = "Model"))
+                messages.add(Message(message = response.text.toString(), role = "Model", id = System.currentTimeMillis()))
             } catch (e : Exception){
                 e.printStackTrace()
                 messages.removeAt(messages.lastIndex)
-                messages.add(Message(message = "Something went wrong!!", role = "Model"))
+                messages.add(Message(message = "Something went wrong!!", role = "Model", id = System.currentTimeMillis()))
                 Log.e("EXCEPTION", "sendMessage: ${e.message}")
             }
         }
     }
+
 }

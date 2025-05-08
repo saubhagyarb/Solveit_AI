@@ -19,20 +19,20 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         val viewModel by viewModels<ChatViewModel>()
+        val appUI = AppUI(viewModel = viewModel)
         setContent {
             SolveItAITheme {
                 Scaffold(
-                    topBar = { AppTopBar(viewModel = viewModel)},
+                    topBar = {appUI.AppTopBar()},
                     modifier = Modifier.fillMaxSize(),
                     bottomBar = { Box(Modifier.imePadding()) {
-                        AppBottomBar(viewModel = viewModel)
+                        appUI.AppBottomBar()
                     } }
                 ) { innerPadding ->
-                    ChatScreen(
+                    appUI.ChatScreen(
                         modifier = Modifier
                             .padding(innerPadding),
-                        messages = viewModel.messages,
-                        viewModel = viewModel
+                        messages = viewModel.messages
                     )
                 }
             }
