@@ -8,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import com.google.ai.client.generativeai.type.content
 import com.saubh.solveitai.GenerativeModel.model
 import kotlinx.coroutines.launch
+import java.util.Calendar
+import java.util.Locale
 
 class ChatViewModel : ViewModel() {
     val messages by lazy {
@@ -63,6 +65,17 @@ class ChatViewModel : ViewModel() {
                 messages.add(Pair(Message(message = "Something went wrong!!", role = "Model", id = System.currentTimeMillis()), null))
                 Log.e("EXCEPTION", "sendMessage: ${e.message}")
             }
+        }
+    }
+
+    fun getTimeOfDay(): String {
+        val calendar = Calendar.getInstance(Locale.getDefault())
+        val hourOfDay = calendar.get(Calendar.HOUR_OF_DAY)
+
+        return when (hourOfDay) {
+            in 0..11 -> "Morning"
+            in 12..16 -> "Afternoon"
+            else -> "Evening"
         }
     }
 

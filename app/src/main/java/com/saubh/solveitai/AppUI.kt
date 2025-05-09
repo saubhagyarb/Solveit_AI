@@ -6,12 +6,6 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -27,6 +21,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.outlined.ArrowBackIosNew
@@ -39,7 +34,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -60,8 +54,6 @@ import androidx.compose.ui.window.Dialog
 import coil3.compose.rememberAsyncImagePainter
 import com.airbnb.lottie.compose.*
 import dev.jeziellago.compose.markdowntext.MarkdownText
-import java.util.Calendar
-import java.util.Locale
 
 class AppUI(private val viewModel: ChatViewModel) {
 
@@ -113,6 +105,7 @@ class AppUI(private val viewModel: ChatViewModel) {
     @Composable
     fun ChatCard(message: Pair<Message, Bitmap?>) {
         val isModel = message.first.role == "Model"
+        var isExpanded by remember { mutableStateOf(false) }
 
         Row(
             modifier = Modifier
@@ -156,15 +149,26 @@ class AppUI(private val viewModel: ChatViewModel) {
                             painter = rememberAsyncImagePainter(bitmap),
                             contentDescription = "Selected image",
                             modifier = Modifier
-                                .size(160.dp)
+                                .size(250.dp)
                                 .clip(RoundedCornerShape(8.dp)),
                             contentScale = ContentScale.Crop
                         )
                     }
 
+                    val fullText = message.first.message
+                    val displayText = if (!isExpanded && fullText.length > 300) {
+                        fullText.take(300) + "..."
+                    } else {
+                        fullText
+                    }
+
+                    val showSeeMore = remember(fullText) {
+                        fullText.length > 300
+                    }
+
                     MarkdownText(
-                        modifier = Modifier.align(Alignment.End),
-                        markdown = message.first.message,
+                        modifier = Modifier.align(Alignment.Start),
+                        markdown = displayText,
                         style = MaterialTheme.typography.bodyLarge.copy(
                             lineHeight = 22.sp,
                             letterSpacing = 0.25.sp,
@@ -178,6 +182,18 @@ class AppUI(private val viewModel: ChatViewModel) {
                         syntaxHighlightTextColor = MaterialTheme.colorScheme.onSurface,
                         linkColor = MaterialTheme.colorScheme.primary
                     )
+
+                    if (showSeeMore || isExpanded) {
+                        Text(
+                            text = if (isExpanded) "See less" else "See more",
+                            modifier = Modifier
+                                .clickable { isExpanded = !isExpanded }
+                                .padding(top = 4.dp)
+                                .align(Alignment.End),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
 
@@ -409,6 +425,7 @@ class AppUI(private val viewModel: ChatViewModel) {
             ) {
                 OutlinedTextField(
                     value = message,
+                    maxLines = 4,
                     onValueChange = { message = it },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(24.dp),
@@ -431,6 +448,18 @@ class AppUI(private val viewModel: ChatViewModel) {
                             Icon(
                                 imageVector = Icons.Default.AddPhotoAlternate,
                                 contentDescription = "Add photo",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    trailingIcon = {
+                        IconButton(
+                            onClick = {},
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Mic,
+                                contentDescription = "Say something",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -466,29 +495,8 @@ class AppUI(private val viewModel: ChatViewModel) {
     }
 
 
-    fun getTimeOfDay(): String {
-        val calendar = Calendar.getInstance(Locale.getDefault())
-        val hourOfDay = calendar.get(Calendar.HOUR_OF_DAY)
-
-        return when (hourOfDay) {
-            in 0..11 -> "Morning"
-            in 12..16 -> "Afternoon"
-            else -> "Evening"
-        }
-    }
-
     @Composable
     fun EmptyScreen() {
-        val infiniteTransition = rememberInfiniteTransition()
-
-        val scale by infiniteTransition.animateFloat(
-            initialValue = 0.95f,
-            targetValue = 1.05f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(2000, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse
-            )
-        )
 
         val gradientBrush = Brush.linearGradient(
             colors = listOf(
@@ -514,33 +522,14 @@ class AppUI(private val viewModel: ChatViewModel) {
                     composition = composition,
                     iterations = LottieConstants.IterateForever,
                 )
-
-                Box(
-                    modifier = Modifier
-                        .size(240.dp)
-                        .scale(scale)
-                        .background(
-                            brush = Brush.radialGradient(
-                                colors = listOf(
-                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
-                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
-                                ),
-                                radius = 240f
-                            ),
-                            shape = CircleShape
-                        )
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    LottieAnimation(
-                        modifier = Modifier.fillMaxSize(),
+                LottieAnimation(
+                        modifier = Modifier.size(250.dp),
                         composition = composition,
-                        progress = { progress },
-                    )
-                }
+                        progress = { progress }
+                )
 
                 Text(
-                    text = "Good ${getTimeOfDay()}!, Let curiosity guide you",
+                    text = "Good ${viewModel.getTimeOfDay()}!, Let curiosity guide you",
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontWeight = FontWeight.Bold,
                         brush = gradientBrush
