@@ -6,15 +6,12 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -47,7 +44,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TileMode
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -61,10 +57,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.core.content.FileProvider
+import coil3.compose.rememberAsyncImagePainter
 import com.airbnb.lottie.compose.*
 import dev.jeziellago.compose.markdowntext.MarkdownText
-import java.io.File
 import java.util.Calendar
 import java.util.Locale
 
@@ -73,7 +68,7 @@ class AppUI(private val viewModel: ChatViewModel) {
     @Composable
     fun ChatScreen(
         modifier: Modifier = Modifier,
-        messages: List<Message>
+        messages: List<Pair<Message, Bitmap?>>
     ) {
         Surface(
             modifier = modifier
@@ -90,7 +85,7 @@ class AppUI(private val viewModel: ChatViewModel) {
     }
 
     @Composable
-    fun ChatList(messages: List<Message>) {
+    fun ChatList(messages: List<Pair<Message, Bitmap?>>) {
         val listState = rememberLazyListState()
         val previousSize = remember { mutableIntStateOf(messages.size) }
         LaunchedEffect(messages.size) {
@@ -109,21 +104,16 @@ class AppUI(private val viewModel: ChatViewModel) {
                 reverseLayout = true
             ) {
                 items(messages.reversed()) {
-                    AnimatedVisibility(
-                        visible = true,
-                        enter = fadeIn(),
-                        exit = fadeOut()
-                    ) {
-                        ChatCard(message = it)
-                    }
+                    ChatCard(message = it)
                 }
             }
         }
     }
 
     @Composable
-    fun ChatCard(message: Message) {
-        val isModel = message.role == "Model"
+    fun ChatCard(message: Pair<Message, Bitmap?>) {
+        val isModel = message.first.role == "Model"
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -139,7 +129,7 @@ class AppUI(private val viewModel: ChatViewModel) {
                     modifier = Modifier
                         .size(24.dp)
                         .padding(end = 4.dp)
-                        .align(alignment = Alignment.Bottom)
+                        .align(Alignment.Bottom)
                 )
             }
 
@@ -147,8 +137,10 @@ class AppUI(private val viewModel: ChatViewModel) {
                 modifier = Modifier
                     .widthIn(max = 300.dp)
                     .background(
-                        color = if (isModel) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
-                        else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f),
+                        color = if (isModel)
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
+                        else
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f),
                         shape = RoundedCornerShape(
                             topStart = 16.dp,
                             topEnd = 16.dp,
@@ -158,19 +150,35 @@ class AppUI(private val viewModel: ChatViewModel) {
                     )
                     .padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
-                MarkdownText(
-                    markdown = message.message,
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        lineHeight = 22.sp,
-                        letterSpacing = 0.25.sp,
-                        color = if (isModel) MaterialTheme.colorScheme.onSurfaceVariant
-                        else MaterialTheme.colorScheme.onPrimaryContainer
-                    ),
-                    isTextSelectable = true,
-                    syntaxHighlightColor = MaterialTheme.colorScheme.surfaceDim,
-                    syntaxHighlightTextColor = MaterialTheme.colorScheme.onSurface,
-                    linkColor = MaterialTheme.colorScheme.primary
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    message.second?.let { bitmap ->
+                        Image(
+                            painter = rememberAsyncImagePainter(bitmap),
+                            contentDescription = "Selected image",
+                            modifier = Modifier
+                                .size(160.dp)
+                                .clip(RoundedCornerShape(8.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+
+                    MarkdownText(
+                        modifier = Modifier.align(Alignment.End),
+                        markdown = message.first.message,
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            lineHeight = 22.sp,
+                            letterSpacing = 0.25.sp,
+                            color = if (isModel)
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            else
+                                MaterialTheme.colorScheme.onPrimaryContainer
+                        ),
+                        isTextSelectable = true,
+                        syntaxHighlightColor = MaterialTheme.colorScheme.surfaceDim,
+                        syntaxHighlightTextColor = MaterialTheme.colorScheme.onSurface,
+                        linkColor = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
 
             if (!isModel) {
@@ -181,11 +189,12 @@ class AppUI(private val viewModel: ChatViewModel) {
                     modifier = Modifier
                         .size(24.dp)
                         .padding(start = 4.dp)
-                        .align(alignment = Alignment.Bottom)
+                        .align(Alignment.Bottom)
                 )
             }
         }
     }
+
 
     @Composable
     fun AppTopBar() {
@@ -244,7 +253,6 @@ class AppUI(private val viewModel: ChatViewModel) {
 
         val context = LocalContext.current
 
-        // Photo Picker for gallery
         val photoPickerLauncher = rememberLauncherForActivityResult(
             contract = ActivityResultContracts.PickVisualMedia()
         ) { uri: Uri? ->
@@ -255,8 +263,6 @@ class AppUI(private val viewModel: ChatViewModel) {
             }
         }
 
-        // Camera launcher - using TakePicturePreview instead of TakePicture
-        // This approach doesn't require FileProvider configuration
         val cameraLauncher = rememberLauncherForActivityResult(
             contract = ActivityResultContracts.TakePicturePreview()
         ) { capturedBitmap ->
@@ -270,172 +276,189 @@ class AppUI(private val viewModel: ChatViewModel) {
             navigationBarsPadding.calculateBottomPadding()
         }
 
-        // Photo options dropdown
-        if (showPhotoOptions) {
-            Dialog(onDismissRequest = { showPhotoOptions = false }) {
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 6.dp
+        fun cameraSelected() {
+            showPhotoOptions = false
+            cameraLauncher.launch(null)
+        }
+
+        fun gallerySelected() {
+            showPhotoOptions = false
+            photoPickerLauncher.launch(
+                PickVisualMediaRequest(
+                    mediaType = ActivityResultContracts.PickVisualMedia.ImageOnly
+                )
+            )
+        }
+
+        fun sendOnclick() {
+            if (message.isNotBlank() || bitmap != null) {
+                if (bitmap != null) viewModel.sendMessage(message, bitmap!!)
+                else viewModel.sendMessage(message)
+                message = ""
+                bitmap = null
+            }
+        }
+
+        Column {
+            bitmap?.let { image ->
+                Box(
+                    modifier = Modifier
+                        .height(100.dp)
+                        .width(100.dp)
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            "Select photo from",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(bottom = 16.dp)
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                    ) {
+                        Image(
+                            painter = rememberAsyncImagePainter(image),
+                            contentDescription = "Selected image",
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .align(Alignment.Center),
+                            contentScale = ContentScale.Fit
                         )
+                    }
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            // Camera option
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clickable {
-                                        showPhotoOptions = false
-                                        cameraLauncher.launch(input = null)
-                                    }
-                                    .padding(8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.PhotoCamera,
-                                    contentDescription = "Camera",
-                                    modifier = Modifier.size(48.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text("Camera", style = MaterialTheme.typography.bodyMedium)
-                            }
+                    IconButton(
+                        onClick = { bitmap = null },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(4.dp)
+                            .background(
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                                CircleShape
+                            )
+                            .size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Remove image",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
 
-                            // Gallery option
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clickable {
-                                        showPhotoOptions = false
-                                        photoPickerLauncher.launch(
-                                            PickVisualMediaRequest(
-                                                mediaType = ActivityResultContracts.PickVisualMedia.ImageOnly
-                                            )
-                                        )
-                                    }
-                                    .padding(8.dp)
+            if (showPhotoOptions) {
+                Dialog(onDismissRequest = { showPhotoOptions = false }) {
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 6.dp
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                "Select photo from",
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.padding(bottom = 16.dp)
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.PhotoLibrary,
-                                    contentDescription = "Gallery",
-                                    modifier = Modifier.size(48.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text("Gallery", style = MaterialTheme.typography.bodyMedium)
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { cameraSelected() }
+                                        .padding(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.PhotoCamera,
+                                        contentDescription = "Camera",
+                                        modifier = Modifier.size(48.dp),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text("Camera", style = MaterialTheme.typography.bodyMedium)
+                                }
+
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { gallerySelected() }
+                                        .padding(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.PhotoLibrary,
+                                        contentDescription = "Gallery",
+                                        modifier = Modifier.size(48.dp),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text("Gallery", style = MaterialTheme.typography.bodyMedium)
+                                }
                             }
                         }
                     }
                 }
             }
-        }
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = bottomPadding),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            OutlinedTextField(
-                value = message,
-                onValueChange = { message = it },
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(24.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                ),
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Sentences,
-                    autoCorrectEnabled = true,
-                    keyboardType = KeyboardType.Text
-                ),
-                leadingIcon = {
-                    IconButton(
-                        onClick = { showPhotoOptions = true },
-                        modifier = Modifier.size(24.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.AddPhotoAlternate,
-                            contentDescription = "Add photo",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                placeholder = {
-                    Text(
-                        "Ask anything...",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                },
-                textStyle = MaterialTheme.typography.bodyLarge,
-                singleLine = false
-            )
-
-            Button(
-                onClick = {
-                    if (message.isNotBlank() || bitmap != null) {
-                        viewModel.sendMessage(message, bitmap!!)
-                        message = ""
-                        bitmap = null
-                    }
-                },
-                modifier = Modifier.size(48.dp),
-                shape = CircleShape,
-                enabled = message.isNotBlank() || bitmap != null,
-                contentPadding = PaddingValues(0.dp),
-            ) {
-                Icon(
-                    imageVector = ImageVector.vectorResource(R.drawable.send),
-                    contentDescription = "Send",
-                    tint = if (message.isNotBlank() || bitmap != null) MaterialTheme.colorScheme.onPrimaryContainer
-                    else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        // Preview the selected image if available
-        bitmap?.let { image ->
-            Box(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = bottomPadding),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Image(
-                    bitmap = image.asImageBitmap(),
-                    contentDescription = "Selected image",
-                    modifier = Modifier
-                        .height(120.dp)
-                        .align(Alignment.Center)
-                        .clip(RoundedCornerShape(8.dp)),
-                    contentScale = ContentScale.Fit
+                OutlinedTextField(
+                    value = message,
+                    onValueChange = { message = it },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    ),
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Sentences,
+                        autoCorrectEnabled = true,
+                        keyboardType = KeyboardType.Text
+                    ),
+                    leadingIcon = {
+                        IconButton(
+                            onClick = { showPhotoOptions = true },
+                            modifier = Modifier.size(24.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AddPhotoAlternate,
+                                contentDescription = "Add photo",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    placeholder = {
+                        Text(
+                            "Ask anything...",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    },
+                    textStyle = MaterialTheme.typography.bodyLarge,
+                    singleLine = false
                 )
 
-                IconButton(
-                    onClick = { bitmap = null },
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f), CircleShape)
-                        .size(24.dp)
+                Button(
+                    onClick = { sendOnclick() },
+                    modifier = Modifier.size(48.dp),
+                    shape = CircleShape,
+                    enabled = message.isNotBlank() || bitmap != null,
+                    contentPadding = PaddingValues(0.dp),
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Remove image",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(16.dp)
+                        imageVector = ImageVector.vectorResource(R.drawable.send),
+                        contentDescription = "Send",
+                        tint = if (message.isNotBlank() || bitmap != null)
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

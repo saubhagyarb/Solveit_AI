@@ -11,7 +11,7 @@ import kotlinx.coroutines.launch
 
 class ChatViewModel : ViewModel() {
     val messages by lazy {
-        mutableStateListOf<Message>()
+        mutableStateListOf<Pair<Message, Bitmap?>>()
     }
 
     fun sendMessage(prompt: String) {
@@ -20,21 +20,22 @@ class ChatViewModel : ViewModel() {
             try {
                 val chat = model.startChat(
                     history = messages.map {
-                        content(it.role) { text(it.message) }
+                        content(it.first.role) { text(it.first.message) }
                     }.toList()
                 )
 
-                messages.add(Message(message = prompt, role = "user", id = System.currentTimeMillis()))
-                messages.add(Message(message = "...", role = "Model", id = System.currentTimeMillis() + 1))
+                messages.add(Pair(Message(message = prompt, role = "user", id = System.currentTimeMillis()), null))
+
+                messages.add(Pair(Message(message = "...", role = "Model", id = System.currentTimeMillis() + 1), null))
 
                 val response = chat.sendMessage(prompt = prompt)
                 Log.d("TAG", "sendMessage: ${response.text}")
                 messages.removeAt(messages.lastIndex)
-                messages.add(Message(message = response.text.toString(), role = "Model", id = System.currentTimeMillis()))
+                messages.add(Pair(Message(message = response.text.toString(), role = "Model", id = System.currentTimeMillis()), null))
             } catch (e : Exception){
                 e.printStackTrace()
                 messages.removeAt(messages.lastIndex)
-                messages.add(Message(message = "Something went wrong!!", role = "Model", id = System.currentTimeMillis()))
+                messages.add(Pair(Message(message = "Something went wrong!!", role = "Model", id = System.currentTimeMillis()), null))
                 Log.e("EXCEPTION", "sendMessage: ${e.message}")
             }
         }
@@ -44,8 +45,8 @@ class ChatViewModel : ViewModel() {
         viewModelScope.launch {
             Log.d("Request", "sendMessage: $prompt")
             try {
-                messages.add(Message(message = prompt, role = "user", id = System.currentTimeMillis()))
-                messages.add(Message(message = "...", role = "Model", id = System.currentTimeMillis() + 1))
+                messages.add(Pair(Message(message = prompt, role = "user", id = System.currentTimeMillis()), image))
+                messages.add(Pair(Message(message = "...", role = "Model", id = System.currentTimeMillis() + 1), null))
 
                 val response = model.generateContent(
                     content {
@@ -55,11 +56,11 @@ class ChatViewModel : ViewModel() {
                 )
                 Log.d("TAG", "sendMessage: ${response.text}")
                 messages.removeAt(messages.lastIndex)
-                messages.add(Message(message = response.text.toString(), role = "Model", id = System.currentTimeMillis()))
+                messages.add(Pair(Message(message = response.text.toString(), role = "Model", id = System.currentTimeMillis()), null))
             } catch (e : Exception){
                 e.printStackTrace()
                 messages.removeAt(messages.lastIndex)
-                messages.add(Message(message = "Something went wrong!!", role = "Model", id = System.currentTimeMillis()))
+                messages.add(Pair(Message(message = "Something went wrong!!", role = "Model", id = System.currentTimeMillis()), null))
                 Log.e("EXCEPTION", "sendMessage: ${e.message}")
             }
         }

@@ -71,4 +71,6 @@ dependencies {
 
     implementation("com.github.jeziellago:compose-markdown:0.5.7")
 
+    implementation("io.coil-kt.coil3:coil-compose:3.1.0")
+
 }
