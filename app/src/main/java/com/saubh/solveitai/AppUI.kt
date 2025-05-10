@@ -12,6 +12,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -34,12 +35,13 @@ import androidx.compose.material.icons.outlined.ArrowBackIosNew
 import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.School
-import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -62,15 +64,22 @@ import androidx.core.content.ContextCompat
 import coil3.compose.rememberAsyncImagePainter
 import com.airbnb.lottie.compose.*
 import dev.jeziellago.compose.markdowntext.MarkdownText
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 class AppUI(private val viewModel: ChatViewModel) {
+    lateinit var scope : CoroutineScope
+    lateinit var snackbarHostState :  SnackbarHostState
 
     @Composable
     fun ChatScreen(
         modifier: Modifier = Modifier,
         messages: List<Pair<Message, Bitmap?>>
     ) {
+        scope = rememberCoroutineScope()
+        snackbarHostState = remember { SnackbarHostState() }
+
         Surface(
             modifier = modifier
                 .fillMaxSize(),
@@ -231,18 +240,19 @@ class AppUI(private val viewModel: ChatViewModel) {
                     .height(48.dp)
             ) {
                 if (viewModel.messages.isNotEmpty()) {
-                    IconButton(
+                    AnimatedIconButton(
                         onClick = { viewModel.messages.clear() },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Outlined.ArrowBackIosNew,
+                                contentDescription = "Delete chat",
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        },
                         modifier = Modifier
                             .align(Alignment.CenterStart)
                             .padding(start = 8.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.ArrowBackIosNew,
-                            contentDescription = "Delete chat",
-                            tint = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
+                    )
                 }
 
                 Row(
@@ -303,6 +313,11 @@ class AppUI(private val viewModel: ChatViewModel) {
                 if (spokenText != null) {
                     message = spokenText
                 } else {
+                    scope.launch { snackbarHostState.showSnackbar(
+                        message = "Failed to recognize speech",
+                        withDismissAction = true,
+                        duration = SnackbarDuration.Short
+                    ) }
                     Toast.makeText(context, "Failed to recognize speech", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -339,8 +354,16 @@ class AppUI(private val viewModel: ChatViewModel) {
                         )
                     }
 
-                    IconButton(
+                    AnimatedIconButton(
                         onClick = { bitmap = null },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Remove image",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        },
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(4.dp)
@@ -349,14 +372,7 @@ class AppUI(private val viewModel: ChatViewModel) {
                                 CircleShape
                             )
                             .size(24.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Remove image",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
+                    )
                 }
             }
 
@@ -452,19 +468,20 @@ class AppUI(private val viewModel: ChatViewModel) {
                         keyboardType = KeyboardType.Text
                     ),
                     leadingIcon = {
-                        IconButton(
+                        AnimatedIconButton(
                             onClick = { showPhotoOptions = true },
                             modifier = Modifier.size(24.dp),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.AddPhotoAlternate,
-                                contentDescription = "Add photo",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Default.AddPhotoAlternate,
+                                    contentDescription = "Add photo",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        )
                     },
                     trailingIcon = {
-                        IconButton(
+                        AnimatedIconButton(
                             onClick = {
                                 if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
                                     == PackageManager.PERMISSION_GRANTED
@@ -483,14 +500,15 @@ class AppUI(private val viewModel: ChatViewModel) {
                                     )
                                 }
                             },
-                            modifier = Modifier.size(24.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Mic,
-                                contentDescription = "Say something",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                            modifier = Modifier.size(24.dp),
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Default.Mic,
+                                    contentDescription = "Say something",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        )
                     },
                     placeholder = {
                         Text(
@@ -532,6 +550,23 @@ class AppUI(private val viewModel: ChatViewModel) {
 
     @Composable
     fun EmptyScreen() {
+        var visible by remember { mutableStateOf(false) }
+
+        LaunchedEffect(Unit) {
+            visible = true
+        }
+
+        val alphaAnimation by animateFloatAsState(
+            targetValue = if (visible) 1f else 0f,
+            animationSpec = AnimationSpecs.quickFadeIn,
+            label = "fade"
+        )
+
+        val scaleAnimation by animateFloatAsState(
+            targetValue = if (visible) 1f else 0.8f,
+            animationSpec = AnimationSpecs.quickScale,
+            label = "scale"
+        )
 
         val gradientBrush = Brush.linearGradient(
             colors = listOf(
@@ -548,7 +583,9 @@ class AppUI(private val viewModel: ChatViewModel) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(24.dp),
+                    .alpha(alphaAnimation)
+                    .scale(scaleAnimation)
+                    .padding(horizontal = 24.dp),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -594,7 +631,6 @@ class AppUI(private val viewModel: ChatViewModel) {
     private fun SuggestionChips() {
         val suggestions = listOf(
             "Tell me a story" to Icons.Rounded.AutoStories,
-            "Daily weather" to Icons.Rounded.WbSunny,
             "Fun facts" to Icons.Rounded.Lightbulb,
             "Help me learn" to Icons.Rounded.School
         )
@@ -675,6 +711,30 @@ class AppUI(private val viewModel: ChatViewModel) {
                 radius = size.width * 0.6f,
                 center = Offset(size.width * 0.2f, size.height * 0.8f)
             )
+        }
+    }
+    @Composable
+    fun AnimatedIconButton(
+        onClick: () -> Unit,
+        icon: @Composable () -> Unit,
+        modifier: Modifier = Modifier
+    ) {
+        var pressed by remember { mutableStateOf(false) }
+
+        val scale by animateFloatAsState(
+            targetValue = if (pressed) 0.85f else 1f,
+            animationSpec = AnimationSpecs.quickScale,
+            label = "scale"
+        )
+
+        IconButton(
+            onClick = {
+                pressed = true
+                onClick()
+            },
+            modifier = modifier.scale(scale)
+        ) {
+            icon()
         }
     }
 }
