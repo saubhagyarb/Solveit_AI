@@ -1,8 +1,14 @@
 package com.saubh.solveitai
 
+import android.Manifest
+import android.app.Activity
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.speech.RecognizerIntent
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -51,9 +57,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import coil3.compose.rememberAsyncImagePainter
 import com.airbnb.lottie.compose.*
 import dev.jeziellago.compose.markdowntext.MarkdownText
+import java.util.Locale
 
 class AppUI(private val viewModel: ChatViewModel) {
 
@@ -259,8 +268,6 @@ class AppUI(private val viewModel: ChatViewModel) {
             }
         }
     }
-
-
     @Composable
     fun AppBottomBar() {
         var message by remember { mutableStateOf("") }
@@ -284,6 +291,23 @@ class AppUI(private val viewModel: ChatViewModel) {
         ) { capturedBitmap ->
             bitmap = capturedBitmap
         }
+
+        val activity = context as Activity
+
+        val speechRecognizerLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult(),
+            onResult = { result ->
+                val spokenText = result.data
+                    ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                    ?.firstOrNull()
+                if (spokenText != null) {
+                    message = spokenText
+                } else {
+                    Toast.makeText(context, "Failed to recognize speech", Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
+
 
         val navigationBarsPadding = WindowInsets.navigationBars.asPaddingValues()
         val bottomPadding = if (navigationBarsPadding.calculateBottomPadding() < 8.dp) {
@@ -441,7 +465,24 @@ class AppUI(private val viewModel: ChatViewModel) {
                     },
                     trailingIcon = {
                         IconButton(
-                            onClick = {},
+                            onClick = {
+                                if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
+                                    == PackageManager.PERMISSION_GRANTED
+                                ) {
+                                    val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                                        putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                                        putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+                                        putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak now...")
+                                    }
+                                    speechRecognizerLauncher.launch(intent)
+                                } else {
+                                    ActivityCompat.requestPermissions(
+                                        activity,
+                                        arrayOf(Manifest.permission.RECORD_AUDIO),
+                                        100
+                                    )
+                                }
+                            },
                             modifier = Modifier.size(24.dp)
                         ) {
                             Icon(
