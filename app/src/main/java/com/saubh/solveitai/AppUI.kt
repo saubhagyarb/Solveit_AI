@@ -292,29 +292,6 @@ class AppUI(private val viewModel: ChatViewModel) {
             navigationBarsPadding.calculateBottomPadding()
         }
 
-        fun cameraSelected() {
-            showPhotoOptions = false
-            cameraLauncher.launch(null)
-        }
-
-        fun gallerySelected() {
-            showPhotoOptions = false
-            photoPickerLauncher.launch(
-                PickVisualMediaRequest(
-                    mediaType = ActivityResultContracts.PickVisualMedia.ImageOnly
-                )
-            )
-        }
-
-        fun sendOnclick() {
-            if (message.isNotBlank() || bitmap != null) {
-                if (bitmap != null) viewModel.sendMessage(message, bitmap!!)
-                else viewModel.sendMessage(message)
-                message = ""
-                bitmap = null
-            }
-        }
-
         Column {
             bitmap?.let { image ->
                 Box(
@@ -381,7 +358,10 @@ class AppUI(private val viewModel: ChatViewModel) {
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     modifier = Modifier
                                         .weight(1f)
-                                        .clickable { cameraSelected() }
+                                        .clickable {
+                                            showPhotoOptions = false
+                                            cameraLauncher.launch(null)
+                                        }
                                         .padding(8.dp)
                                 ) {
                                     Icon(
@@ -398,7 +378,14 @@ class AppUI(private val viewModel: ChatViewModel) {
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     modifier = Modifier
                                         .weight(1f)
-                                        .clickable { gallerySelected() }
+                                        .clickable {
+                                            showPhotoOptions = false
+                                            photoPickerLauncher.launch(
+                                                PickVisualMediaRequest(
+                                                    mediaType = ActivityResultContracts.PickVisualMedia.ImageOnly
+                                                )
+                                            )
+                                        }
                                         .padding(8.dp)
                                 ) {
                                     Icon(
@@ -475,7 +462,14 @@ class AppUI(private val viewModel: ChatViewModel) {
                 )
 
                 Button(
-                    onClick = { sendOnclick() },
+                    onClick = {
+                        if (message.isNotBlank() || bitmap != null) {
+                            if (bitmap != null) viewModel.sendMessage(message, bitmap!!)
+                            else viewModel.sendMessage(message)
+                            message = ""
+                            bitmap = null
+                        }
+                    },
                     modifier = Modifier.size(48.dp),
                     shape = CircleShape,
                     enabled = message.isNotBlank() || bitmap != null,
