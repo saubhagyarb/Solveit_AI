@@ -64,22 +64,14 @@ import androidx.core.content.ContextCompat
 import coil3.compose.rememberAsyncImagePainter
 import com.airbnb.lottie.compose.*
 import dev.jeziellago.compose.markdowntext.MarkdownText
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import java.util.Locale
 
 class AppUI(private val viewModel: ChatViewModel) {
-    lateinit var scope : CoroutineScope
-    lateinit var snackbarHostState :  SnackbarHostState
-
     @Composable
     fun ChatScreen(
         modifier: Modifier = Modifier,
         messages: List<Pair<Message, Bitmap?>>
     ) {
-        scope = rememberCoroutineScope()
-        snackbarHostState = remember { SnackbarHostState() }
-
         Surface(
             modifier = modifier
                 .fillMaxSize(),
@@ -313,11 +305,6 @@ class AppUI(private val viewModel: ChatViewModel) {
                 if (spokenText != null) {
                     message = spokenText
                 } else {
-                    scope.launch { snackbarHostState.showSnackbar(
-                        message = "Failed to recognize speech",
-                        withDismissAction = true,
-                        duration = SnackbarDuration.Short
-                    ) }
                     Toast.makeText(context, "Failed to recognize speech", Toast.LENGTH_SHORT).show()
                 }
             }
