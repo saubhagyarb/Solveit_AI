@@ -18,7 +18,6 @@ class ChatViewModel : ViewModel() {
 
     fun sendMessage(prompt: String) {
         viewModelScope.launch {
-            Log.d("Request", "sendMessage: $prompt")
             try {
                 val chat = model.startChat(
                     history = messages.map {
@@ -26,19 +25,51 @@ class ChatViewModel : ViewModel() {
                     }.toList()
                 )
 
-                messages.add(Pair(Message(message = prompt, role = "user", id = System.currentTimeMillis()), null))
+                messages.add(
+                    Pair(
+                        Message(
+                            message = prompt,
+                            role = "user",
+                            id = System.currentTimeMillis()
+                        ), null
+                    )
+                )
 
-                messages.add(Pair(Message(message = "...", role = "Model", id = System.currentTimeMillis() + 1), null))
+                messages.add(
+                    Pair(
+                        Message(
+                            message = "...",
+                            role = "Model",
+                            id = System.currentTimeMillis() + 1
+                        ), null
+                    )
+                )
 
                 val response = chat.sendMessage(prompt = prompt)
-                Log.d("TAG", "sendMessage: ${response.text}")
                 messages.removeAt(messages.lastIndex)
-                messages.add(Pair(Message(message = response.text.toString(), role = "Model", id = System.currentTimeMillis()), null))
-            } catch (e : Exception){
+                messages.add(
+                    Pair(
+                        Message(
+                            message = response.text.toString(),
+                            role = "Model",
+                            id = System.currentTimeMillis()
+                        ), null
+                    )
+                )
+            } catch (e: Exception) {
                 e.printStackTrace()
-                messages.removeAt(messages.lastIndex)
-                messages.add(Pair(Message(message = "Something went wrong!!", role = "Model", id = System.currentTimeMillis()), null))
-                Log.e("EXCEPTION", "sendMessage: ${e.message}")
+                if (messages.isNotEmpty()) {
+                    messages.removeAt(messages.lastIndex)
+                    messages.add(
+                        Pair(
+                            Message(
+                                message = "Something went wrong!!",
+                                role = "Model",
+                                id = System.currentTimeMillis()
+                            ), null
+                        )
+                    )
+                }
             }
         }
     }
@@ -47,8 +78,24 @@ class ChatViewModel : ViewModel() {
         viewModelScope.launch {
             Log.d("Request", "sendMessage: $prompt")
             try {
-                messages.add(Pair(Message(message = prompt, role = "user", id = System.currentTimeMillis()), image))
-                messages.add(Pair(Message(message = "...", role = "Model", id = System.currentTimeMillis() + 1), null))
+                messages.add(
+                    Pair(
+                        Message(
+                            message = prompt,
+                            role = "user",
+                            id = System.currentTimeMillis()
+                        ), image
+                    )
+                )
+                messages.add(
+                    Pair(
+                        Message(
+                            message = "...",
+                            role = "Model",
+                            id = System.currentTimeMillis() + 1
+                        ), null
+                    )
+                )
 
                 val response = model.generateContent(
                     content {
@@ -58,11 +105,27 @@ class ChatViewModel : ViewModel() {
                 )
                 Log.d("TAG", "sendMessage: ${response.text}")
                 messages.removeAt(messages.lastIndex)
-                messages.add(Pair(Message(message = response.text.toString(), role = "Model", id = System.currentTimeMillis()), null))
-            } catch (e : Exception){
+                messages.add(
+                    Pair(
+                        Message(
+                            message = response.text.toString(),
+                            role = "Model",
+                            id = System.currentTimeMillis()
+                        ), null
+                    )
+                )
+            } catch (e: Exception) {
                 e.printStackTrace()
                 messages.removeAt(messages.lastIndex)
-                messages.add(Pair(Message(message = "Something went wrong!!", role = "Model", id = System.currentTimeMillis()), null))
+                messages.add(
+                    Pair(
+                        Message(
+                            message = "Something went wrong!!",
+                            role = "Model",
+                            id = System.currentTimeMillis()
+                        ), null
+                    )
+                )
                 Log.e("EXCEPTION", "sendMessage: ${e.message}")
             }
         }
