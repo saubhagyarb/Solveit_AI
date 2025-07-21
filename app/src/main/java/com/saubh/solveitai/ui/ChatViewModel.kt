@@ -1,4 +1,4 @@
-package com.saubh.solveitai
+package com.saubh.solveitai.ui
 
 import android.graphics.Bitmap
 import android.util.Log
@@ -6,7 +6,8 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.ai.client.generativeai.type.content
-import com.saubh.solveitai.GenerativeModel.model
+import com.saubh.solveitai.data.GenerativeModel
+import com.saubh.solveitai.data.Message
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.Locale
@@ -19,7 +20,7 @@ class ChatViewModel : ViewModel() {
     fun sendMessage(prompt: String) {
         viewModelScope.launch {
             try {
-                val chat = model.startChat(
+                val chat = GenerativeModel.model.startChat(
                     history = messages.map {
                         content(it.first.role) { text(it.first.message) }
                     }.toList()
@@ -97,7 +98,7 @@ class ChatViewModel : ViewModel() {
                     )
                 )
 
-                val response = model.generateContent(
+                val response = GenerativeModel.model.generateContent(
                     content {
                         image(image)
                         text(prompt)

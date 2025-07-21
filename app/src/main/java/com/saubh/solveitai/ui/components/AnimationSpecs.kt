@@ -1,4 +1,4 @@
-package com.saubh.solveitai
+package com.saubh.solveitai.ui.components
 
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring

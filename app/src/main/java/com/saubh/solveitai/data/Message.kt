@@ -1,4 +1,4 @@
-package com.saubh.solveitai
+package com.saubh.solveitai.data
 
 data class Message(
     val message: String,
