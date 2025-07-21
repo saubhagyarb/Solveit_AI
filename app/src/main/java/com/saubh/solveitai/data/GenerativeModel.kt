@@ -1,6 +1,7 @@
 package com.saubh.solveitai.data
 
 import com.google.ai.client.generativeai.GenerativeModel
+import com.saubh.solveitai.BuildConfig
 
 object GenerativeModel {
     val model : GenerativeModel = GenerativeModel(

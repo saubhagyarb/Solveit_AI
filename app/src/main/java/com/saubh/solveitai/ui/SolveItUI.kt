@@ -1,6 +1,6 @@
 package com.saubh.solveitai.ui
 
-import android.graphics.Bitmap
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -40,7 +40,6 @@ import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.saubh.solveitai.ui.components.AnimationSpecs
 import com.saubh.solveitai.R
-import com.saubh.solveitai.data.Message
 import com.saubh.solveitai.ui.components.ChatCard
 import com.saubh.solveitai.ui.components.DrawBackground
 import com.saubh.solveitai.ui.components.SuggestionChips
@@ -48,7 +47,8 @@ import com.saubh.solveitai.ui.components.SuggestionChips
 @Composable
     fun ChatScreen(
         modifier: Modifier = Modifier,
-        viewModel : ChatViewModel
+        viewModel : ChatViewModel,
+        onBackPressed : () -> Unit
     ) {
         val messages = viewModel.messages
         Surface(
@@ -60,13 +60,14 @@ import com.saubh.solveitai.ui.components.SuggestionChips
             if (messages.isEmpty()) {
                 EmptyScreen(viewModel = viewModel)
             } else {
-                ChatList(messages = messages)
+                ChatList(viewModel = viewModel, onBackPressed = onBackPressed)
             }
         }
     }
 
     @Composable
-    fun ChatList(messages: List<Pair<Message, Bitmap?>>) {
+    fun ChatList(viewModel: ChatViewModel, onBackPressed : () -> Unit) {
+        val messages = viewModel.messages
         val listState = rememberLazyListState()
         val previousSize = remember { mutableIntStateOf(messages.size) }
         LaunchedEffect(messages.size) {
@@ -75,9 +76,9 @@ import com.saubh.solveitai.ui.components.SuggestionChips
             }
             previousSize.intValue = messages.size
         }
-
+        BackHandler { onBackPressed() }
         Box(
-            modifier = Modifier.Companion
+            modifier = Modifier
                 .fillMaxSize()
         ) {
             LazyColumn(

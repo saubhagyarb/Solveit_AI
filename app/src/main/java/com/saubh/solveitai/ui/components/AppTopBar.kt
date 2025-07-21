@@ -28,7 +28,8 @@ import com.saubh.solveitai.R
 import com.saubh.solveitai.ui.ChatViewModel
 
 @Composable
-fun AppTopBar(viewModel : ChatViewModel) {
+fun AppTopBar(viewModel : ChatViewModel, onBackPressed : ()-> Unit) {
+
     Surface {
         Box(
             modifier = Modifier.Companion
@@ -38,7 +39,7 @@ fun AppTopBar(viewModel : ChatViewModel) {
         ) {
             if (viewModel.messages.isNotEmpty()) {
                 AnimatedIconButton(
-                    onClick = { viewModel.messages.clear() },
+                    onClick = onBackPressed,
                     icon = {
                         Icon(
                             imageVector = Icons.Outlined.ArrowBackIosNew,
