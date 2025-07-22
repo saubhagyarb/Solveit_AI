@@ -1,18 +1,26 @@
 package com.saubh.solveitai.ui
 
+import android.app.Application
 import android.graphics.Bitmap
 import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.ai.client.generativeai.type.content
+import com.saubh.solveitai.data.AppDatabase
 import com.saubh.solveitai.data.GenerativeModel
 import com.saubh.solveitai.data.Message
+import com.saubh.solveitai.data.Chat
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.Locale
 
-class ChatViewModel : ViewModel() {
+class ChatViewModel(application: Application) : AndroidViewModel(application) {
+    private val database = AppDatabase.getDatabase(application)
+    private val chatDao = database.chatDao()
+
+    val savedChats = chatDao.getAllChats()
+
     val messages by lazy {
         mutableStateListOf<Pair<Message, Bitmap?>>()
     }
@@ -143,4 +151,34 @@ class ChatViewModel : ViewModel() {
         }
     }
 
+    fun saveCurrentChat() {
+        if (messages.isNotEmpty()) {
+            val firstUserMessage = messages.find { it.first.role == "user" }?.first?.message ?: "New Chat"
+            viewModelScope.launch {
+                val chat = Chat(
+                    id = System.currentTimeMillis().toString(),
+                    name = firstUserMessage.take(30),
+                    messages = messages.map { it.first }
+                )
+                chatDao.insertChat(chat)
+            }
+        }
+    }
+
+    fun loadChat(chat: Chat) {
+        messages.clear()
+        messages.addAll(chat.messages.map { Pair(it, null) })
+    }
+
+    fun deleteChat(chatId: String) {
+        viewModelScope.launch {
+            chatDao.deleteChat(chatId)
+        }
+    }
+
+    fun deleteAllChat(){
+        viewModelScope.launch {
+            chatDao.deleteAllChats()
+        }
+    }
 }

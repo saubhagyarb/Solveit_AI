@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.outlined.ArrowBackIosNew
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -28,8 +29,11 @@ import com.saubh.solveitai.R
 import com.saubh.solveitai.ui.ChatViewModel
 
 @Composable
-fun AppTopBar(viewModel : ChatViewModel, onBackPressed : ()-> Unit) {
-
+fun AppTopBar(
+    viewModel : ChatViewModel,
+    onBackPressed : () -> Unit,
+    onMenuPressed : () -> Unit
+) {
     Surface {
         Box(
             modifier = Modifier.Companion
@@ -52,7 +56,16 @@ fun AppTopBar(viewModel : ChatViewModel, onBackPressed : ()-> Unit) {
                         .padding(start = 8.dp)
                 )
             } else {
-                //TODO add a 3 dot btn where the history will be there to select
+                AnimatedIconButton(
+                    onClick = onMenuPressed,
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.History,
+                            contentDescription = "Show Menu to select from the history",
+                            tint = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
+                )
             }
 
             Row(

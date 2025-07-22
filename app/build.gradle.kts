@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.android.libraries.mapsplatform.secrets.gradle.plugin)
+
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -68,6 +70,13 @@ dependencies {
 
     implementation("io.coil-kt.coil3:coil-compose:3.2.0")
 
+    val roomVersion = "2.7.2"
+
+    implementation("androidx.room:room-runtime:$roomVersion")
+    implementation("androidx.room:room-ktx:${roomVersion}")
+    ksp("androidx.room:room-compiler:$roomVersion")
+
+    implementation("com.google.code.gson:gson:2.13.1")
 }
 
 kotlin {
