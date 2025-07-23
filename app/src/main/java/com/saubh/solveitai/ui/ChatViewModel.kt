@@ -4,6 +4,7 @@ import android.app.Application
 import android.graphics.Bitmap
 import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.ai.client.generativeai.type.content
@@ -24,6 +25,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     val messages by lazy {
         mutableStateListOf<Pair<Message, Bitmap?>>()
     }
+
+    // Track current chat ID for updates
+    private val _currentChatId = mutableStateOf<String?>(null)
+    val currentChatId get() = _currentChatId.value
 
     fun sendMessage(prompt: String) {
         viewModelScope.launch {
@@ -153,14 +158,22 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     fun saveCurrentChat() {
         if (messages.isNotEmpty()) {
-            val firstUserMessage = messages.find { it.first.role == "user" }?.first?.message ?: "New Chat"
             viewModelScope.launch {
+                val firstUserMessage = messages.find { it.first.role == "user" }?.first?.message ?: "New Chat"
+
+                val chatId = _currentChatId.value ?: System.currentTimeMillis().toString()
+
                 val chat = Chat(
-                    id = System.currentTimeMillis().toString(),
+                    id = chatId,
                     name = firstUserMessage.take(30),
                     messages = messages.map { it.first }
                 )
+
                 chatDao.insertChat(chat)
+
+                if (_currentChatId.value == null) {
+                    _currentChatId.value = chatId
+                }
             }
         }
     }
@@ -168,17 +181,27 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     fun loadChat(chat: Chat) {
         messages.clear()
         messages.addAll(chat.messages.map { Pair(it, null) })
+        _currentChatId.value = chat.id
+    }
+
+    fun startNewChat() {
+        messages.clear()
+        _currentChatId.value = null
     }
 
     fun deleteChat(chatId: String) {
         viewModelScope.launch {
             chatDao.deleteChat(chatId)
+            if (_currentChatId.value == chatId) {
+                startNewChat()
+            }
         }
     }
 
-    fun deleteAllChat(){
+    fun deleteAllChat() {
         viewModelScope.launch {
             chatDao.deleteAllChats()
+            startNewChat()
         }
     }
 }

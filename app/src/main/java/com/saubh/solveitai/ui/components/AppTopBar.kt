@@ -18,6 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -30,29 +31,32 @@ import com.saubh.solveitai.ui.ChatViewModel
 
 @Composable
 fun AppTopBar(
-    viewModel : ChatViewModel,
-    onBackPressed : () -> Unit,
-    onMenuPressed : () -> Unit
+    viewModel: ChatViewModel,
+    onBackPressed: () -> Unit,
+    onMenuPressed: () -> Unit
 ) {
+    // Memoize the condition to avoid recomposition
+    val hasMessages = remember(viewModel.messages.size) { viewModel.messages.isNotEmpty() }
+
     Surface {
         Box(
-            modifier = Modifier.Companion
+            modifier = Modifier
                 .fillMaxWidth()
-                .padding(WindowInsets.Companion.statusBars.asPaddingValues())
+                .padding(WindowInsets.statusBars.asPaddingValues())
                 .height(48.dp)
         ) {
-            if (viewModel.messages.isNotEmpty()) {
+            if (hasMessages) {
                 AnimatedIconButton(
                     onClick = onBackPressed,
                     icon = {
                         Icon(
                             imageVector = Icons.Outlined.ArrowBackIosNew,
-                            contentDescription = "Delete chat",
+                            contentDescription = "Back",
                             tint = MaterialTheme.colorScheme.onBackground
                         )
                     },
-                    modifier = Modifier.Companion
-                        .align(Alignment.Companion.CenterStart)
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
                         .padding(start = 8.dp)
                 )
             } else {
@@ -64,20 +68,23 @@ fun AppTopBar(
                             contentDescription = "Show Menu to select from the history",
                             tint = MaterialTheme.colorScheme.onBackground
                         )
-                    }
+                    },
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .padding(start = 8.dp)
                 )
             }
 
             Row(
-                modifier = Modifier.Companion.align(Alignment.Companion.Center),
-                verticalAlignment = Alignment.Companion.CenterVertically,
+                modifier = Modifier.align(Alignment.Center),
+                verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
                 Icon(
-                    imageVector = ImageVector.Companion.vectorResource(R.drawable.cloud_build_svgrepo_com),
+                    imageVector = ImageVector.vectorResource(R.drawable.cloud_build_svgrepo_com),
                     contentDescription = "App logo",
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.Companion
+                    modifier = Modifier
                         .size(28.dp)
                         .padding(end = 8.dp)
                 )
@@ -85,7 +92,7 @@ fun AppTopBar(
                     text = stringResource(R.string.app_name),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Companion.Bold
+                    fontWeight = FontWeight.Bold
                 )
             }
         }

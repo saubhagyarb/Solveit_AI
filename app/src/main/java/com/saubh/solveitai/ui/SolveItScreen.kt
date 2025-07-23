@@ -30,13 +30,21 @@ fun SolveItApp() {
 
     if (showDialog.value) {
         ShowAlertDialog(
-            onDismissRequest = { showDialog.value = false },
+            onDismissRequest = {
+                showDialog.value = false
+                viewModel.startNewChat() // Clear messages when dismissing without saving
+            },
             onConfirmation = {
                 viewModel.saveCurrentChat()
                 showDialog.value = false
+                viewModel.startNewChat() // Start fresh after saving
             },
             dialogTitle = "Save Chat",
-            dialogText = "Do you want to save this chat?"
+            dialogText = if (viewModel.currentChatId != null) {
+                "Do you want to update this saved chat?"
+            } else {
+                "Do you want to save this chat?"
+            }
         )
     }
 
@@ -54,7 +62,11 @@ fun SolveItApp() {
             topBar = {
                 AppTopBar(
                     viewModel = viewModel,
-                    onBackPressed = { showDialog.value = true },
+                    onBackPressed = {
+                        if (viewModel.messages.isNotEmpty()) {
+                            showDialog.value = true
+                        }
+                    },
                     onMenuPressed = { scope.launch { drawerState.open() } }
                 )
             },
@@ -66,26 +78,14 @@ fun SolveItApp() {
             },
             containerColor = MaterialTheme.colorScheme.background
         ) { innerPadding ->
-            if (showDialog.value) {
-                ShowAlertDialog(
-                    onDismissRequest = {
-                        showDialog.value = false
-                        viewModel.messages.clear()
-                    },
-                    onConfirmation = {
-                        viewModel.saveCurrentChat()
-                        showDialog.value = false
-                        viewModel.messages.clear()
-                    },
-                    dialogTitle = "Do you want to save this chat?",
-                    dialogText = "It will help you to get back to this chat again whenever you want."
-                )
-            }
-
             ChatScreen(
                 modifier = Modifier.padding(innerPadding),
                 viewModel = viewModel,
-                onBackPressed = { showDialog.value = true }
+                onBackPressed = {
+                    if (viewModel.messages.isNotEmpty()) {
+                        showDialog.value = true
+                    }
+                }
             )
         }
     }
